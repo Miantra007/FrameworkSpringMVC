@@ -1,24 +1,25 @@
 package servlet;
 
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
 import java.io.*;
-import java.rmi.ServerException;
 
 public class FrontControllerServlet extends HttpServlet {
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServerException, IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
         recupererUrl(request, response);
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServerException, IOException {
+            throws ServletException, IOException {
         recupererUrl(request, response);
     }
 
     private void recupererUrl(HttpServletRequest request, HttpServletResponse response)
-            throws ServerException, IOException {
+            throws ServletException, IOException {
 
         StringBuffer url = request.getRequestURL();
         response.setContentType("text/plain");
