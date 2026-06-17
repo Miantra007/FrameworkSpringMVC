@@ -24,14 +24,25 @@ public class FrontControllerServlet extends HttpServlet {
         processRequest(request, response);
     }
 
-    public void init() {
+    @Override
+    public void init() throws ServletException {
+
         String packageName = getServletConfig().getInitParameter("controller-package");
 
         Utilitaire util = new Utilitaire();
-        List<Class<?>> controller = util.recupererClasseController(packageName,
-                mg.itu.miantra.annotation.Controller.class);
-        for (Class<?> c : controller) {
-            listController.add(c.getName());
+
+        try {
+
+            List<Class<?>> controllers = util.recupererClasseController(
+                    packageName,
+                    mg.itu.miantra.annotation.Controller.class);
+
+            for (Class<?> c : controllers) {
+                listController.add(c.getName());
+            }
+
+        } catch (Exception e) {
+            throw new ServletException(e);
         }
     }
 
