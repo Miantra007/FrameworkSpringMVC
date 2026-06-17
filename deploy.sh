@@ -5,7 +5,7 @@ rm -rf build
 mkdir -p build/classes
 
 echo "compilation..."
-javac -cp "lib/*" -d build/classes servlet/*.java
+javac -cp "lib/*" -d build/classes $(find . -name "*.java")
 
 if [ $? -ne 0 ]; then
     echo "erreur de compilation"
