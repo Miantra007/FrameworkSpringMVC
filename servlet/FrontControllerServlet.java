@@ -3,16 +3,19 @@ package servlet;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
 import mg.itu.miantra.annotation.Url;
+import util.Mapping;
 import util.Utilitaire;
 
 import java.io.*;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class FrontControllerServlet extends HttpServlet {
 
-    List<Method> methods = new ArrayList<>();
+    HashMap<String, Mapping> map = new HashMap<>();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -32,11 +35,21 @@ public class FrontControllerServlet extends HttpServlet {
         String packageName = getServletConfig().getInitParameter("controller-package");
 
         Utilitaire util = new Utilitaire();
+        List<Class<?>> controller = new ArrayList<>();
 
         try {
 
-            methods = util.recupererClasseController(packageName,
-                    mg.itu.miantra.annotation.Controller.class, mg.itu.miantra.annotation.Url.class);
+            controller = util.recupererClasseController(packageName,
+                    mg.itu.miantra.annotation.Controller.class);
+            for (Class<?> c : controller) {
+                List<Method> methods = util.methodWithAnnotation(c, mg.itu.miantra.annotation.Url.class);
+                for (Method m : methods) {
+                    Url annotation = m.getAnnotation(Url.class);
+                    String url = annotation.value();
+                    Mapping mapping = new Mapping(c, m);
+                    map.put(url, mapping);
+                }
+            }
 
         } catch (Exception e) {
             throw new ServletException(e);
@@ -58,41 +71,24 @@ public class FrontControllerServlet extends HttpServlet {
             out.println("Erreur : request.getPathInfo() retourne null. Verifie le mapping du servlet.");
             return;
         }
+        if (map.containsKey(lastUrl)) {
+            Mapping mapping = map.get(lastUrl);
+            out.println("Url : " + lastUrl);
+            out.println("Class : " + mapping.getClazz().getName());
+            out.println("Methode : " + mapping.getMethod().getName());
+            out.println("-------------------------------");
 
-        boolean found = false;
-
-        for (Method m : methods) {
-            Url annotation = m.getAnnotation(Url.class);
-            String urll = annotation.value();
-            if (urll.equals(lastUrl)) {
-                found = true;
-                Class<?> clazz = m.getDeclaringClass();
-                String nomClass = clazz.getName();
-                out.println("Classe : " + nomClass);
-                out.println("Method : " + m.getName());
-                out.println("Url :" + urll);
-                break;
-
-            }
-
-        }
-
-        if (!found) {
-            out.println("Aucune correspondance trouvée.");
-            out.println("Liste des URLs disponibles :");
-            out.println(" ");
-
-            for (Method mm : methods) {
-                Url annotationn = mm.getAnnotation(Url.class);
-                String urlll = annotationn.value();
-                Class<?> clazz = mm.getDeclaringClass();
-                String nomClass = clazz.getName();
-                out.println("Classe : " + nomClass);
-                out.println("Method : " + mm.getName());
-                out.println("Url :" + urlll);
-                out.println("-------------");
+        } else {
+            for (Map.Entry<String, Mapping> entry : map.entrySet()) {
+                String url = entry.getKey();
+                Mapping mp = entry.getValue();
+                out.println("Url : " + url);
+                out.println("Class : " + mp.getClazz().getName());
+                out.println("Methode : " + mp.getMethod().getName());
+                out.println("-------------------------------");
 
             }
+
         }
 
     }

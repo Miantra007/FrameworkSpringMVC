@@ -9,12 +9,11 @@ import java.util.List;
 
 public class Utilitaire {
 
-    public List<Method> recupererClasseController(String packageName,
-            Class<? extends Annotation> controller,
-            Class<? extends Annotation> url)
+    public List<Class<?>> recupererClasseController(String packageName,
+            Class<? extends Annotation> controller)
             throws Exception {
 
-        List<Method> met = new ArrayList<>();
+        List<Class<?>> ctrll = new ArrayList<>();
 
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         String path = packageName.replace('.', '/');
@@ -34,17 +33,23 @@ public class Utilitaire {
                 Class<?> clazz = Class.forName(className);
 
                 if (clazz.isAnnotationPresent(controller)) {
-                    Method[] methods = clazz.getDeclaredMethods();
-                    for (Method m : methods) {
-                        if (m.isAnnotationPresent(url)) {
-                            met.add(m);
-                        }
-                    }
+                    ctrll.add(clazz);
                 }
             }
         }
+        return ctrll;
+    }
 
-        return met;
+    public List<Method> methodWithAnnotation(Class<?> clazz, Class<? extends Annotation> url) {
+        List<Method> methods = new ArrayList<>();
+        Method[] meths = clazz.getDeclaredMethods();
+        for (Method m : meths) {
+            if (m.isAnnotationPresent(url)) {
+                methods.add(m);
+            }
+        }
+        return methods;
+
     }
 
 }
