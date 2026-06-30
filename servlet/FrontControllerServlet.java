@@ -78,9 +78,17 @@ public class FrontControllerServlet extends HttpServlet {
 
         HttpMethod httpMethod = HttpMethod.valueOf(request.getMethod());
         UrlMethod urlMethod = new UrlMethod(lastUrl, httpMethod);
-        
+
         if (map.containsKey(urlMethod)) {
             Mapping mapping = map.get(urlMethod);
+            try {
+                Method met = mapping.getMethod();
+                Object controller = mapping.getClazz().getDeclaredConstructor().newInstance();
+                Object result = met.invoke(controller);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             out.println("Url : " + urlMethod.getUrl() + " - " + urlMethod.getHttpMethod());
             out.println("Class : " + mapping.getClazz().getName());
             out.println("Methode : " + mapping.getMethod().getName());
