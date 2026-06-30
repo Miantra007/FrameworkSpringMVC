@@ -3,7 +3,9 @@ package servlet;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
 import mg.itu.miantra.annotation.Url;
+import util.HttpMethod;
 import util.Mapping;
+import util.UrlMethod;
 import util.Utilitaire;
 
 import java.io.*;
@@ -15,7 +17,7 @@ import java.util.Map;
 
 public class FrontControllerServlet extends HttpServlet {
 
-    HashMap<String, Mapping> map = new HashMap<>();
+    HashMap<UrlMethod, Mapping> map = new HashMap<>();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -39,15 +41,17 @@ public class FrontControllerServlet extends HttpServlet {
 
         try {
 
-            controller = util.recupererClasseController(packageName,
-                    mg.itu.miantra.annotation.Controller.class);
+            controller = util.recupererClasseController(packageName, mg.itu.miantra.annotation.Controller.class);
             for (Class<?> c : controller) {
                 List<Method> methods = util.methodWithAnnotation(c, mg.itu.miantra.annotation.Url.class);
                 for (Method m : methods) {
                     Url annotation = m.getAnnotation(Url.class);
                     String url = annotation.value();
+                    HttpMethod method = HttpMethod.valueOf(annotation.method());
+                    UrlMethod urlMethod = new UrlMethod(url, method);
+
                     Mapping mapping = new Mapping(c, m);
-                    map.put(url, mapping);
+                    map.put(urlMethod, mapping);
                 }
             }
 
@@ -71,18 +75,22 @@ public class FrontControllerServlet extends HttpServlet {
             out.println("Erreur : request.getPathInfo() retourne null. Verifie le mapping du servlet.");
             return;
         }
-        if (map.containsKey(lastUrl)) {
-            Mapping mapping = map.get(lastUrl);
-            out.println("Url : " + lastUrl);
+
+        HttpMethod httpMethod = HttpMethod.valueOf(request.getMethod());
+        UrlMethod urlMethod = new UrlMethod(lastUrl, httpMethod);
+        
+        if (map.containsKey(urlMethod)) {
+            Mapping mapping = map.get(urlMethod);
+            out.println("Url : " + urlMethod.getUrl() + " - " + urlMethod.getHttpMethod());
             out.println("Class : " + mapping.getClazz().getName());
             out.println("Methode : " + mapping.getMethod().getName());
             out.println("-------------------------------");
 
         } else {
-            for (Map.Entry<String, Mapping> entry : map.entrySet()) {
-                String url = entry.getKey();
+            for (Map.Entry<UrlMethod, Mapping> entry : map.entrySet()) {
+                UrlMethod url = entry.getKey();
                 Mapping mp = entry.getValue();
-                out.println("Url : " + url);
+                out.println("Url : " + url.getUrl() + " - " + url.getHttpMethod());
                 out.println("Class : " + mp.getClazz().getName());
                 out.println("Methode : " + mp.getMethod().getName());
                 out.println("-------------------------------");
