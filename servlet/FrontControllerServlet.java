@@ -3,16 +3,21 @@ package servlet;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
 import mg.itu.miantra.annotation.Url;
+import util.HttpMethod;
+import util.Mapping;
+import util.UrlMethod;
 import util.Utilitaire;
 
 import java.io.*;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class FrontControllerServlet extends HttpServlet {
 
-    List<Method> methods = new ArrayList<>();
+    HashMap<UrlMethod, Mapping> map = new HashMap<>();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -32,11 +37,23 @@ public class FrontControllerServlet extends HttpServlet {
         String packageName = getServletConfig().getInitParameter("controller-package");
 
         Utilitaire util = new Utilitaire();
+        List<Class<?>> controller = new ArrayList<>();
 
         try {
 
-            methods = util.recupererClasseController(packageName,
-                    mg.itu.miantra.annotation.Controller.class, mg.itu.miantra.annotation.Url.class);
+            controller = util.recupererClasseController(packageName, mg.itu.miantra.annotation.Controller.class);
+            for (Class<?> c : controller) {
+                List<Method> methods = util.methodWithAnnotation(c, mg.itu.miantra.annotation.Url.class);
+                for (Method m : methods) {
+                    Url annotation = m.getAnnotation(Url.class);
+                    String url = annotation.value();
+                    HttpMethod method = HttpMethod.valueOf(annotation.method());
+                    UrlMethod urlMethod = new UrlMethod(url, method);
+
+                    Mapping mapping = new Mapping(c, m);
+                    map.put(urlMethod, mapping);
+                }
+            }
 
         } catch (Exception e) {
             throw new ServletException(e);
@@ -59,40 +76,27 @@ public class FrontControllerServlet extends HttpServlet {
             return;
         }
 
-        boolean found = false;
+        HttpMethod httpMethod = HttpMethod.valueOf(request.getMethod());
+        UrlMethod urlMethod = new UrlMethod(lastUrl, httpMethod);
+        
+        if (map.containsKey(urlMethod)) {
+            Mapping mapping = map.get(urlMethod);
+            out.println("Url : " + urlMethod.getUrl() + " - " + urlMethod.getHttpMethod());
+            out.println("Class : " + mapping.getClazz().getName());
+            out.println("Methode : " + mapping.getMethod().getName());
+            out.println("-------------------------------");
 
-        for (Method m : methods) {
-            Url annotation = m.getAnnotation(Url.class);
-            String urll = annotation.value();
-            if (urll.equals(lastUrl)) {
-                found = true;
-                Class<?> clazz = m.getDeclaringClass();
-                String nomClass = clazz.getName();
-                out.println("Classe : " + nomClass);
-                out.println("Method : " + m.getName());
-                out.println("Url :" + urll);
-                break;
-
-            }
-
-        }
-
-        if (!found) {
-            out.println("Aucune correspondance trouvée.");
-            out.println("Liste des URLs disponibles :");
-            out.println(" ");
-
-            for (Method mm : methods) {
-                Url annotationn = mm.getAnnotation(Url.class);
-                String urlll = annotationn.value();
-                Class<?> clazz = mm.getDeclaringClass();
-                String nomClass = clazz.getName();
-                out.println("Classe : " + nomClass);
-                out.println("Method : " + mm.getName());
-                out.println("Url :" + urlll);
-                out.println("-------------");
+        } else {
+            for (Map.Entry<UrlMethod, Mapping> entry : map.entrySet()) {
+                UrlMethod url = entry.getKey();
+                Mapping mp = entry.getValue();
+                out.println("Url : " + url.getUrl() + " - " + url.getHttpMethod());
+                out.println("Class : " + mp.getClazz().getName());
+                out.println("Methode : " + mp.getMethod().getName());
+                out.println("-------------------------------");
 
             }
+
         }
 
     }
