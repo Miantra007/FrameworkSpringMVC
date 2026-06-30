@@ -10,4 +10,6 @@ import java.lang.annotation.Target;
 public @interface Url {
     String value();
 
+    String method() default "GET";
+
 }
