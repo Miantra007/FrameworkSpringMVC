@@ -51,7 +51,12 @@ public class FrontControllerServlet extends HttpServlet {
                     UrlMethod urlMethod = new UrlMethod(url, method);
 
                     Mapping mapping = new Mapping(c, m);
-                    map.put(urlMethod, mapping);
+                    if (map.containsKey(urlMethod)) {
+                        throw new RuntimeException("Mapping déjà existant pour : " + urlMethod.getUrl() + " et "
+                                + urlMethod.getHttpMethod());
+                    } else {
+                        map.put(urlMethod, mapping);
+                    }
                 }
             }
 
@@ -75,8 +80,7 @@ public class FrontControllerServlet extends HttpServlet {
             out.println("Erreur : request.getPathInfo() retourne null. Verifie le mapping du servlet.");
             return;
         }
-
-        HttpMethod httpMethod = HttpMethod.valueOf(request.getMethod());
+        HttpMethod httpMethod = HttpMethod.valueOf(request.getMethod().toUpperCase());
         UrlMethod urlMethod = new UrlMethod(lastUrl, httpMethod);
 
         if (map.containsKey(urlMethod)) {
