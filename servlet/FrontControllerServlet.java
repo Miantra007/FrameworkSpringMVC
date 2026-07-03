@@ -1,18 +1,15 @@
 package servlet;
 
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
-import mg.itu.miantra.annotation.Url;
 import util.HttpMethod;
 import util.Mapping;
 import util.UrlMethod;
-import util.Utilitaire;
 
 import java.io.*;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class FrontControllerServlet extends HttpServlet {
@@ -32,37 +29,11 @@ public class FrontControllerServlet extends HttpServlet {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void init() throws ServletException {
 
-        String packageName = getServletConfig().getInitParameter("controller-package");
-
-        Utilitaire util = new Utilitaire();
-        List<Class<?>> controller = new ArrayList<>();
-
-        try {
-
-            controller = util.recupererClasseController(packageName, mg.itu.miantra.annotation.Controller.class);
-            for (Class<?> c : controller) {
-                List<Method> methods = util.methodWithAnnotation(c, mg.itu.miantra.annotation.Url.class);
-                for (Method m : methods) {
-                    Url annotation = m.getAnnotation(Url.class);
-                    String url = annotation.value();
-                    HttpMethod method = HttpMethod.valueOf(annotation.method());
-                    UrlMethod urlMethod = new UrlMethod(url, method);
-
-                    Mapping mapping = new Mapping(c, m);
-                    if (map.containsKey(urlMethod)) {
-                        throw new RuntimeException("Mapping déjà existant pour : " + urlMethod.getUrl() + " et "
-                                + urlMethod.getHttpMethod());
-                    } else {
-                        map.put(urlMethod, mapping);
-                    }
-                }
-            }
-
-        } catch (Exception e) {
-            throw new ServletException(e);
-        }
+        ServletContext context = getServletContext();
+        map = (HashMap<UrlMethod, Mapping>) context.getAttribute("mapping");
     }
 
     private void processRequest(HttpServletRequest request, HttpServletResponse response)
