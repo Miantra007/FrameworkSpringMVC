@@ -62,6 +62,7 @@ public class Listener implements ServletContextListener {
             context.setAttribute("mapping", map);
 
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             throw new RuntimeException(e);
         }
     }
