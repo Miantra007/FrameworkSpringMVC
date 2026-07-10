@@ -6,6 +6,7 @@ import jakarta.servlet.http.*;
 import util.HttpMethod;
 import util.Mapping;
 import util.UrlMethod;
+import util.ModelAndView;
 
 import java.io.*;
 import java.lang.reflect.Method;
@@ -15,6 +16,8 @@ import java.util.Map;
 public class FrontControllerServlet extends HttpServlet {
 
     HashMap<UrlMethod, Mapping> map = new HashMap<>();
+    String prefix;
+    String suffix;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -34,6 +37,9 @@ public class FrontControllerServlet extends HttpServlet {
 
         ServletContext context = getServletContext();
         map = (HashMap<UrlMethod, Mapping>) context.getAttribute("mapping");
+
+        this.prefix = getServletContext().getInitParameter("prefix");
+        this.suffix = getServletContext().getInitParameter("suffix");
     }
 
     private void processRequest(HttpServletRequest request, HttpServletResponse response)
@@ -60,6 +66,22 @@ public class FrontControllerServlet extends HttpServlet {
                 Method met = mapping.getMethod();
                 Object controller = mapping.getClazz().getDeclaredConstructor().newInstance();
                 Object result = met.invoke(controller);
+                if (result instanceof ModelAndView mv) {
+
+                    for (Map.Entry<String, Object> entry : mv.getModel().entrySet()) {
+                        request.setAttribute(entry.getKey(), entry.getValue());
+                    }
+
+                    String view = prefix + "/" + mv.getView() + suffix;
+
+                    request.getRequestDispatcher(view).forward(request, response);
+                    return;
+                }
+
+                if (result instanceof String str) {
+                    response.getWriter().println(str);
+                    return;
+                }
 
             } catch (Exception e) {
                 e.printStackTrace();
