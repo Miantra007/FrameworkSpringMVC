@@ -17,6 +17,8 @@ import util.Utilitaire;
 // @WebListener
 public class Listener implements ServletContextListener {
 
+    private static final String SPRING_ROOT_CONTEXT_ATTRIBUTE = "org.springframework.web.context.WebApplicationContext.ROOT";
+
     @Override
     public void contextInitialized(ServletContextEvent sce) {
 
@@ -58,7 +60,13 @@ public class Listener implements ServletContextListener {
                     map.put(urlMethod, mapping);
                 }
             }
+            Object conteneurSpring = context.getAttribute(SPRING_ROOT_CONTEXT_ATTRIBUTE);
+            if (conteneurSpring == null) {
+                throw new RuntimeException("Le conteneur spring n'a pas pu etre recuperer au demarrage"
+                        + "verifier l'ordre des listners dans le web.xml");
+            }
 
+            context.setAttribute("springContext", conteneurSpring);
             context.setAttribute("mapping", map);
 
         } catch (Exception e) {
