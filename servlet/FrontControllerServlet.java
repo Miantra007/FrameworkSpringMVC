@@ -18,6 +18,7 @@ public class FrontControllerServlet extends HttpServlet {
     HashMap<UrlMethod, Mapping> map = new HashMap<>();
     String prefix;
     String suffix;
+    Object springContext;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -37,6 +38,7 @@ public class FrontControllerServlet extends HttpServlet {
 
         ServletContext context = getServletContext();
         map = (HashMap<UrlMethod, Mapping>) context.getAttribute("mapping");
+        springContext= getServletContext().getAttribute("springContext");
 
         this.prefix = getServletContext().getInitParameter("prefix");
         this.suffix = getServletContext().getInitParameter("suffix");
@@ -65,7 +67,8 @@ public class FrontControllerServlet extends HttpServlet {
             try {
                 Method met = mapping.getMethod();
                 Object controller = mapping.getClazz().getDeclaredConstructor().newInstance();
-                Object result = met.invoke(controller);
+                Object result = met.invoke(controller,springContext);
+            
                 if (result instanceof ModelAndView mv) {
 
                     for (Map.Entry<String, Object> entry : mv.getModel().entrySet()) {
