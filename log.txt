@@ -1,0 +1,6 @@
+- creer annotation webApi
+- avant de dispatch verifier si annotation webApi existe alors retourne json avec printWritter,content-type = application-json (if/else)
+- si valeur de retour de la fonction : string alors ne plus appeler to json -> printWritter
+- si autre que string alors faire to json
+
+- dans webApi ajouter un autre attribut true/false pour dire si c'est deja json ou non , si non c'est la qu'on appelle to json

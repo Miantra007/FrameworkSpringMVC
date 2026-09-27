@@ -3,11 +3,12 @@ package servlet;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
+import mg.itu.miantra.annotation.WebApi;
 import util.HttpMethod;
 import util.Mapping;
 import util.UrlMethod;
 import util.ModelAndView;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -38,7 +39,7 @@ public class FrontControllerServlet extends HttpServlet {
 
         ServletContext context = getServletContext();
         map = (HashMap<UrlMethod, Mapping>) context.getAttribute("mapping");
-        springContext= getServletContext().getAttribute("springContext");
+        springContext = getServletContext().getAttribute("springContext");
 
         this.prefix = getServletContext().getInitParameter("prefix");
         this.suffix = getServletContext().getInitParameter("suffix");
@@ -67,8 +68,26 @@ public class FrontControllerServlet extends HttpServlet {
             try {
                 Method met = mapping.getMethod();
                 Object controller = mapping.getClazz().getDeclaredConstructor().newInstance();
-                Object result = met.invoke(controller,springContext);
-            
+                Object result = met.invoke(controller, springContext);
+                boolean isWebAPI = met.isAnnotationPresent(WebApi.class);
+
+                if (isWebAPI) {
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    PrintWriter pw = response.getWriter();
+
+                    if (result instanceof String str) {
+                        response.setContentType("text/plain");
+                        response.setCharacterEncoding("UTF-8");
+                        pw.print(str);
+                    } else {
+                        ObjectMapper obMap = new ObjectMapper();
+                        String json = obMap.writeValueAsString(result);
+                        pw.println(json);
+                    }
+                    return;
+                }
+
                 if (result instanceof ModelAndView mv) {
 
                     for (Map.Entry<String, Object> entry : mv.getModel().entrySet()) {
