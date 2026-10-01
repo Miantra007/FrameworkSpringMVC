@@ -13,6 +13,7 @@ import java.io.*;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.lang.reflect.Parameter;
 
 public class FrontControllerServlet extends HttpServlet {
 
@@ -68,7 +69,48 @@ public class FrontControllerServlet extends HttpServlet {
             try {
                 Method met = mapping.getMethod();
                 Object controller = mapping.getClazz().getDeclaredConstructor().newInstance();
-                Object result = met.invoke(controller, springContext);
+                Object result = null;
+                boolean parametreValide = false;
+
+                if (met.getParameterCount() == 0) {
+                    result = met.invoke(controller);
+
+                } else if (met.getParameterCount() == 1) {
+                    Class<?> paramType = met.getParameterTypes()[0];
+                    if (paramType == Object.class) {
+                        result = met.invoke(controller, springContext);
+                    } else {
+                        parametreValide = true;
+                    }
+                } else {
+                    parametreValide = true;
+                }
+
+                if (parametreValide) {
+                    Parameter[] parametres = met.getParameters();
+                    Map<String, String[]> parametrePage = request.getParameterMap();
+                    Object[] valeurs = new Object[parametres.length];
+
+                    for (Map.Entry<String, String[]> entry : parametrePage.entrySet()) {
+
+                        for (int i = 0; i < parametres.length; i++) {
+
+                            Parameter p = parametres[i];
+
+                            if (p.getName().equals(entry.getKey())) {
+                                String valeur = entry.getValue()[0];
+
+                                if (p.getType() == String.class) {
+                                    valeurs[i] = valeur;
+                                } else if (p.getType() == int.class) {
+                                    valeurs[i] = Integer.parseInt(valeur);
+                                }
+                            }
+                        }
+                    }
+                    result = met.invoke(controller, valeurs);
+
+                }
                 boolean isWebAPI = met.isAnnotationPresent(WebApi.class);
 
                 if (isWebAPI) {
@@ -107,6 +149,7 @@ public class FrontControllerServlet extends HttpServlet {
 
             } catch (Exception e) {
                 e.printStackTrace();
+                throw new ServletException(e);
             }
             out.println("Url : " + urlMethod.getUrl() + " - " + urlMethod.getHttpMethod());
             out.println("Class : " + mapping.getClazz().getName());
