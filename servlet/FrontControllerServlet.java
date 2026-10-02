@@ -13,6 +13,9 @@ import java.io.*;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.springframework.context.ApplicationContext;
+
 import java.lang.reflect.Parameter;
 
 public class FrontControllerServlet extends HttpServlet {
@@ -20,7 +23,7 @@ public class FrontControllerServlet extends HttpServlet {
     HashMap<UrlMethod, Mapping> map = new HashMap<>();
     String prefix;
     String suffix;
-    Object springContext;
+    ApplicationContext springContext;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -40,7 +43,7 @@ public class FrontControllerServlet extends HttpServlet {
 
         ServletContext context = getServletContext();
         map = (HashMap<UrlMethod, Mapping>) context.getAttribute("mapping");
-        springContext = getServletContext().getAttribute("springContext");
+        springContext = (ApplicationContext) getServletContext().getAttribute("springContext");
 
         this.prefix = getServletContext().getInitParameter("prefix");
         this.suffix = getServletContext().getInitParameter("suffix");
@@ -77,7 +80,7 @@ public class FrontControllerServlet extends HttpServlet {
 
                 } else if (met.getParameterCount() == 1) {
                     Class<?> paramType = met.getParameterTypes()[0];
-                    if (paramType == Object.class) {
+                    if (paramType == ApplicationContext.class) {
                         result = met.invoke(controller, springContext);
                     } else {
                         parametreValide = true;
@@ -91,17 +94,21 @@ public class FrontControllerServlet extends HttpServlet {
                     Map<String, String[]> parametrePage = request.getParameterMap();
                     Object[] valeurs = new Object[parametres.length];
 
-                    for (Map.Entry<String, String[]> entry : parametrePage.entrySet()) {
+                    for (int i = 0; i < parametres.length; i++) {
 
-                        for (int i = 0; i < parametres.length; i++) {
+                        Parameter p = parametres[i];
 
-                            Parameter p = parametres[i];
+                        if (p.getType() == ApplicationContext.class) {
+                            valeurs[i] = springContext;
+                        } else {
+                            String[] valeurParametre = parametrePage.get(p.getName());
+                            if (valeurParametre != null) {
 
-                            if (p.getName().equals(entry.getKey())) {
-                                String valeur = entry.getValue()[0];
+                                String valeur = valeurParametre[0];
 
                                 if (p.getType() == String.class) {
                                     valeurs[i] = valeur;
+
                                 } else if (p.getType() == int.class) {
                                     valeurs[i] = Integer.parseInt(valeur);
                                 }
@@ -109,8 +116,8 @@ public class FrontControllerServlet extends HttpServlet {
                         }
                     }
                     result = met.invoke(controller, valeurs);
-
                 }
+
                 boolean isWebAPI = met.isAnnotationPresent(WebApi.class);
 
                 if (isWebAPI) {
