@@ -77,19 +77,9 @@ public class FrontControllerServlet extends HttpServlet {
 
                 if (met.getParameterCount() == 0) {
                     result = met.invoke(controller);
-
-                } else if (met.getParameterCount() == 1) {
-                    Class<?> paramType = met.getParameterTypes()[0];
-                    if (paramType == ApplicationContext.class) {
-                        result = met.invoke(controller, springContext);
-                    } else {
-                        parametreValide = true;
-                    }
-                } else {
-                    parametreValide = true;
-                }
-
-                if (parametreValide) {
+                } 
+                 else {
+                  
                     Parameter[] parametres = met.getParameters();
                     Map<String, String[]> parametrePage = request.getParameterMap();
                     Object[] valeurs = new Object[parametres.length];
