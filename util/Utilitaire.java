@@ -3,6 +3,7 @@ package util;
 import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +51,28 @@ public class Utilitaire {
         }
         return methods;
 
+    }
+
+    public Object convertObject(Class<?> type, String v) {
+
+        if (type == String.class) {
+
+            return v;
+
+        } else if (type == int.class) {
+
+            return Integer.parseInt(v);
+
+        } else if (type == Boolean.class) {
+
+            return Boolean.parseBoolean(v);
+
+        } else if (type == Double.class) {
+
+            return Double.parseDouble(v);
+        }
+
+        return null;
     }
 
 }

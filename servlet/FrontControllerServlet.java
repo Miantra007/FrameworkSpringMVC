@@ -7,9 +7,11 @@ import mg.itu.miantra.annotation.WebApi;
 import util.HttpMethod;
 import util.Mapping;
 import util.UrlMethod;
+import util.Utilitaire;
 import util.ModelAndView;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +26,7 @@ public class FrontControllerServlet extends HttpServlet {
     String prefix;
     String suffix;
     ApplicationContext springContext;
+    Utilitaire util = new Utilitaire();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -73,36 +76,54 @@ public class FrontControllerServlet extends HttpServlet {
                 Method met = mapping.getMethod();
                 Object controller = mapping.getClazz().getDeclaredConstructor().newInstance();
                 Object result = null;
-                boolean parametreValide = false;
 
                 if (met.getParameterCount() == 0) {
                     result = met.invoke(controller);
-                } 
-                 else {
-                  
+                } else {
+
                     Parameter[] parametres = met.getParameters();
                     Map<String, String[]> parametrePage = request.getParameterMap();
                     Object[] valeurs = new Object[parametres.length];
 
                     for (int i = 0; i < parametres.length; i++) {
-
                         Parameter p = parametres[i];
+                        Class<?> type = p.getType();
 
-                        if (p.getType() == ApplicationContext.class) {
+                        if (type == ApplicationContext.class) {
                             valeurs[i] = springContext;
-                        } else {
+
+                        } else if (type == String.class ||
+                                type == int.class ||
+                                type == Boolean.class ||
+                                type == Double.class) {
+
                             String[] valeurParametre = parametrePage.get(p.getName());
                             if (valeurParametre != null) {
 
                                 String valeur = valeurParametre[0];
 
-                                if (p.getType() == String.class) {
-                                    valeurs[i] = valeur;
+                                valeurs[i] = util.convertObject(p.getType(), valeur);
 
-                                } else if (p.getType() == int.class) {
-                                    valeurs[i] = Integer.parseInt(valeur);
+                            }
+                        } else {
+                            Object object = type.getDeclaredConstructor().newInstance();
+                            Field[] fields = type.getDeclaredFields();
+                            Object valeurConvertie = null;
+
+                            for (int j = 0; j < fields.length; j++) {
+
+                                String[] valeurObjet = parametrePage.get(fields[j].getName());
+
+                                if (valeurObjet != null) {
+                                    String v = valeurObjet[0];
+
+                                    valeurConvertie = util.convertObject(fields[j].getType(), v);
+
+                                    fields[j].setAccessible(true);
+                                    fields[j].set(object, valeurConvertie);
                                 }
                             }
+                            valeurs[i] = object;
                         }
                     }
                     result = met.invoke(controller, valeurs);
@@ -153,7 +174,9 @@ public class FrontControllerServlet extends HttpServlet {
             out.println("Methode : " + mapping.getMethod().getName());
             out.println("-------------------------------");
 
-        } else {
+        } else
+
+        {
             for (Map.Entry<UrlMethod, Mapping> entry : map.entrySet()) {
                 UrlMethod url = entry.getKey();
                 Mapping mp = entry.getValue();
