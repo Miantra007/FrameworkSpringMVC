@@ -68,7 +68,43 @@ public class FrontControllerServlet extends HttpServlet {
             try {
                 Method met = mapping.getMethod();
                 Object controller = mapping.getClazz().getDeclaredConstructor().newInstance();
+<<<<<<< Updated upstream
                 Object result = met.invoke(controller, springContext);
+=======
+                Object result = null;
+
+                Parameter[] parametres = met.getParameters();
+                Map<String, String[]> parametrePage = request.getParameterMap();
+                Object[] valeurs = new Object[parametres.length];
+                if (met.getParameterCount() == 0) {
+                    result = met.invoke(controller);
+
+                } else {
+                    for (int i = 0; i < parametres.length; i++) {
+
+                        Parameter p = parametres[i];
+
+                        if (p.getType() == ApplicationContext.class) {
+                            valeurs[i] = springContext;
+                        } else {
+                            String[] valeurParametre = parametrePage.get(p.getName());
+                            if (valeurParametre != null) {
+
+                                String valeur = valeurParametre[0];
+
+                                if (p.getType() == String.class) {
+                                    valeurs[i] = valeur;
+
+                                } else if (p.getType() == int.class) {
+                                    valeurs[i] = Integer.parseInt(valeur);
+                                }
+                            }
+                        }
+                    }
+                    result = met.invoke(controller, valeurs);
+                }
+
+>>>>>>> Stashed changes
                 boolean isWebAPI = met.isAnnotationPresent(WebApi.class);
 
                 if (isWebAPI) {
