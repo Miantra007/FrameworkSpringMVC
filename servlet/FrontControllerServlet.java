@@ -14,12 +14,16 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.context.ApplicationContext;
+
+import java.lang.reflect.Parameter;
+
 public class FrontControllerServlet extends HttpServlet {
 
     HashMap<UrlMethod, Mapping> map = new HashMap<>();
     String prefix;
     String suffix;
-    Object springContext;
+    ApplicationContext springContext;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -39,7 +43,7 @@ public class FrontControllerServlet extends HttpServlet {
 
         ServletContext context = getServletContext();
         map = (HashMap<UrlMethod, Mapping>) context.getAttribute("mapping");
-        springContext = getServletContext().getAttribute("springContext");
+        springContext = (ApplicationContext) getServletContext().getAttribute("springContext");
 
         this.prefix = getServletContext().getInitParameter("prefix");
         this.suffix = getServletContext().getInitParameter("suffix");
@@ -68,18 +72,18 @@ public class FrontControllerServlet extends HttpServlet {
             try {
                 Method met = mapping.getMethod();
                 Object controller = mapping.getClazz().getDeclaredConstructor().newInstance();
-<<<<<<< Updated upstream
-                Object result = met.invoke(controller, springContext);
-=======
                 Object result = null;
+                boolean parametreValide = false;
 
-                Parameter[] parametres = met.getParameters();
-                Map<String, String[]> parametrePage = request.getParameterMap();
-                Object[] valeurs = new Object[parametres.length];
                 if (met.getParameterCount() == 0) {
                     result = met.invoke(controller);
+                } 
+                 else {
+                  
+                    Parameter[] parametres = met.getParameters();
+                    Map<String, String[]> parametrePage = request.getParameterMap();
+                    Object[] valeurs = new Object[parametres.length];
 
-                } else {
                     for (int i = 0; i < parametres.length; i++) {
 
                         Parameter p = parametres[i];
@@ -104,7 +108,6 @@ public class FrontControllerServlet extends HttpServlet {
                     result = met.invoke(controller, valeurs);
                 }
 
->>>>>>> Stashed changes
                 boolean isWebAPI = met.isAnnotationPresent(WebApi.class);
 
                 if (isWebAPI) {
@@ -143,6 +146,7 @@ public class FrontControllerServlet extends HttpServlet {
 
             } catch (Exception e) {
                 e.printStackTrace();
+                throw new ServletException(e);
             }
             out.println("Url : " + urlMethod.getUrl() + " - " + urlMethod.getHttpMethod());
             out.println("Class : " + mapping.getClazz().getName());
