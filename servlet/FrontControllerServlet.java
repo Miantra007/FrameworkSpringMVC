@@ -96,37 +96,17 @@ public class FrontControllerServlet extends HttpServlet {
                                 type == int.class ||
                                 type == Boolean.class ||
                                 type == Double.class) {
+
                             String[] valeurParametre = parametrePage.get(p.getName());
+
                             if (valeurParametre != null) {
 
                                 String valeur = valeurParametre[0];
-
                                 valeurs[i] = util.convertObject(p.getType(), valeur);
-
                             }
                         } else {
-                            Object object = type.getDeclaredConstructor().newInstance();
-                            Field[] fields = type.getDeclaredFields();
-                            Object valeurConvertie = null;
-
-                            for (int j = 0; j < fields.length; j++) {
-
-                                String prefix = type.getSimpleName().toLowerCase();
-                                String nomChamp = fields[j].getName();
-
-                                String nomParam = prefix + "." + nomChamp;
-                                String[] valeurObjet = parametrePage.get(nomParam);
-
-                                if (valeurObjet != null) {
-                                    String v = valeurObjet[0];
-
-                                    valeurConvertie = util.convertObject(fields[j].getType(), v);
-
-                                    fields[j].setAccessible(true);
-                                    fields[j].set(object, valeurConvertie);
-                                }
-                            }
-                            valeurs[i] = object;
+                            String prefix = type.getSimpleName().toLowerCase();
+                            valeurs[i] = util.construireObjet(type, prefix, parametrePage);
                         }
                     }
                     result = met.invoke(controller, valeurs);
