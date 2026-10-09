@@ -96,7 +96,6 @@ public class FrontControllerServlet extends HttpServlet {
                                 type == int.class ||
                                 type == Boolean.class ||
                                 type == Double.class) {
-
                             String[] valeurParametre = parametrePage.get(p.getName());
                             if (valeurParametre != null) {
 
@@ -112,7 +111,11 @@ public class FrontControllerServlet extends HttpServlet {
 
                             for (int j = 0; j < fields.length; j++) {
 
-                                String[] valeurObjet = parametrePage.get(fields[j].getName());
+                                String prefix = type.getSimpleName().toLowerCase();
+                                String nomChamp = fields[j].getName();
+
+                                String nomParam = prefix + "." + nomChamp;
+                                String[] valeurObjet = parametrePage.get(nomParam);
 
                                 if (valeurObjet != null) {
                                     String v = valeurObjet[0];
