@@ -11,14 +11,16 @@ import util.Utilitaire;
 import util.ModelAndView;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.context.ApplicationContext;
 
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 
 public class FrontControllerServlet extends HttpServlet {
 
@@ -92,21 +94,45 @@ public class FrontControllerServlet extends HttpServlet {
                         if (type == ApplicationContext.class) {
                             valeurs[i] = springContext;
 
-                        } else if (type == String.class ||
-                                type == int.class ||
-                                type == Boolean.class ||
-                                type == Double.class) {
+                        } else if (util.estTypeSimple(type)) {
 
                             String[] valeurParametre = parametrePage.get(p.getName());
 
                             if (valeurParametre != null) {
 
                                 String valeur = valeurParametre[0];
-                                valeurs[i] = util.convertObject(p.getType(), valeur);
+                                valeurs[i] = util.convertObject(type, valeur);
+                            }
+                        } else if (List.class.isAssignableFrom(type)) {
+
+                            Type typeGenerique = p.getParameterizedType();
+
+                            if (typeGenerique instanceof ParameterizedType) {
+
+                                ParameterizedType typeParametre = (ParameterizedType) typeGenerique;
+
+                                Type typeElement = typeParametre.getActualTypeArguments()[0];
+
+                                if (typeElement instanceof Class<?>) {
+
+                                    Class<?> classeElement = (Class<?>) typeElement;
+
+                                    String prefix = classeElement.getSimpleName().toLowerCase();
+                                    valeurs[i] = util.construireListeObjets(
+                                            classeElement,
+                                            prefix,
+                                            parametrePage);
+                                }
+
                             }
                         } else {
+
                             String prefix = type.getSimpleName().toLowerCase();
-                            valeurs[i] = util.construireObjet(type, prefix, parametrePage);
+                            valeurs[i] = util.construireObjet(
+                                    type,
+                                    prefix,
+                                    parametrePage);
+
                         }
                     }
                     result = met.invoke(controller, valeurs);
