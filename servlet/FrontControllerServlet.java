@@ -11,14 +11,16 @@ import util.Utilitaire;
 import util.ModelAndView;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.context.ApplicationContext;
 
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 
 public class FrontControllerServlet extends HttpServlet {
 
@@ -92,38 +94,45 @@ public class FrontControllerServlet extends HttpServlet {
                         if (type == ApplicationContext.class) {
                             valeurs[i] = springContext;
 
-                        } else if (type == String.class ||
-                                type == int.class ||
-                                type == Boolean.class ||
-                                type == Double.class) {
+                        } else if (util.estTypeSimple(type)) {
 
                             String[] valeurParametre = parametrePage.get(p.getName());
+
                             if (valeurParametre != null) {
 
                                 String valeur = valeurParametre[0];
+                                valeurs[i] = util.convertObject(type, valeur);
+                            }
+                        } else if (List.class.isAssignableFrom(type)) {
 
-                                valeurs[i] = util.convertObject(p.getType(), valeur);
+                            Type typeGenerique = p.getParameterizedType();
+
+                            if (typeGenerique instanceof ParameterizedType) {
+
+                                ParameterizedType typeParametre = (ParameterizedType) typeGenerique;
+
+                                Type typeElement = typeParametre.getActualTypeArguments()[0];
+
+                                if (typeElement instanceof Class<?>) {
+
+                                    Class<?> classeElement = (Class<?>) typeElement;
+
+                                    String prefix = classeElement.getSimpleName().toLowerCase();
+                                    valeurs[i] = util.construireListeObjets(
+                                            classeElement,
+                                            prefix,
+                                            parametrePage);
+                                }
 
                             }
                         } else {
-                            Object object = type.getDeclaredConstructor().newInstance();
-                            Field[] fields = type.getDeclaredFields();
-                            Object valeurConvertie = null;
 
-                            for (int j = 0; j < fields.length; j++) {
+                            String prefix = type.getSimpleName().toLowerCase();
+                            valeurs[i] = util.construireObjet(
+                                    type,
+                                    prefix,
+                                    parametrePage);
 
-                                String[] valeurObjet = parametrePage.get(fields[j].getName());
-
-                                if (valeurObjet != null) {
-                                    String v = valeurObjet[0];
-
-                                    valeurConvertie = util.convertObject(fields[j].getType(), v);
-
-                                    fields[j].setAccessible(true);
-                                    fields[j].set(object, valeurConvertie);
-                                }
-                            }
-                            valeurs[i] = object;
                         }
                     }
                     result = met.invoke(controller, valeurs);
