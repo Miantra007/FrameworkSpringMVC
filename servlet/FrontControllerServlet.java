@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
 import mg.itu.miantra.annotation.WebApi;
 import util.HttpMethod;
+import util.MapFile;
 import util.Mapping;
 import util.UrlMethod;
 import util.Utilitaire;
@@ -87,6 +88,21 @@ public class FrontControllerServlet extends HttpServlet {
                     Map<String, String[]> parametrePage = request.getParameterMap();
                     Object[] valeurs = new Object[parametres.length];
 
+                    Map<String, Part> fichiers = new HashMap<String, Part>();
+
+                    if (request.getContentType() != null
+                            && request.getContentType().toLowerCase().startsWith("multipart/form-data")) {
+
+                        for (Part part : request.getParts()) {
+
+                            if (part.getSubmittedFileName() != null
+                                    && !part.getSubmittedFileName().isEmpty()) {
+
+                                fichiers.put(part.getName(), part);
+                            }
+                        }
+                    }
+
                     for (int i = 0; i < parametres.length; i++) {
                         Parameter p = parametres[i];
                         Class<?> type = p.getType();
@@ -103,6 +119,21 @@ public class FrontControllerServlet extends HttpServlet {
                                 String valeur = valeurParametre[0];
                                 valeurs[i] = util.convertObject(type, valeur);
                             }
+                        } else if (type == MapFile.class) {
+                            String nomParametre = p.getName();
+                            Part fichier = fichiers.get(nomParametre);
+
+                            if (fichier != null
+                                    && fichier.getSubmittedFileName() != null
+                                    && !fichier.getSubmittedFileName().isEmpty()) {
+
+                                valeurs[i] = util.construireMapFile(fichier);
+
+                            } else {
+
+                                valeurs[i] = null;
+                            }
+
                         } else if (List.class.isAssignableFrom(type)) {
 
                             Type typeGenerique = p.getParameterizedType();
@@ -121,7 +152,7 @@ public class FrontControllerServlet extends HttpServlet {
                                     valeurs[i] = util.construireListeObjets(
                                             classeElement,
                                             prefix,
-                                            parametrePage);
+                                            parametrePage, fichiers);
                                 }
 
                             }
@@ -131,7 +162,7 @@ public class FrontControllerServlet extends HttpServlet {
                             valeurs[i] = util.construireObjet(
                                     type,
                                     prefix,
-                                    parametrePage);
+                                    parametrePage, fichiers);
 
                         }
                     }

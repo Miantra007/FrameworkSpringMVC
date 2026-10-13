@@ -3,9 +3,9 @@ package util;
 public class MapFile {
     String name;
     String extension;
-    Byte[] bytes;
+    byte[] bytes;
 
-    public MapFile(String name, String extension, Byte[] bytes) {
+    public MapFile(String name, String extension, byte[] bytes) {
         this.name = name;
         this.extension = extension;
         this.bytes = bytes;
@@ -27,11 +27,11 @@ public class MapFile {
         this.extension = extension;
     }
 
-    public Byte[] getBytes() {
+    public byte[] getBytes() {
         return bytes;
     }
 
-    public void setBytes(Byte[] bytes) {
+    public void setBytes(byte[] bytes) {
         this.bytes = bytes;
     }
 

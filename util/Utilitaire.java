@@ -1,6 +1,8 @@
 package util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -13,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+
+import jakarta.servlet.http.Part;
 
 public class Utilitaire {
 
@@ -131,7 +135,7 @@ public class Utilitaire {
     public List<Object> construireListeObjets(
             Class<?> typeElement,
             String prefixe,
-            Map<String, String[]> parametrePage) throws Exception {
+            Map<String, String[]> parametrePage, Map<String, Part> fichiers) throws Exception {
 
         List<Object> liste = new ArrayList<>();
         Set<Integer> indices = new TreeSet<>();
@@ -164,7 +168,7 @@ public class Utilitaire {
             Object objet = construireObjet(
                     typeElement,
                     prefixeObjet,
-                    parametrePage);
+                    parametrePage, fichiers);
 
             liste.add(objet);
         }
@@ -174,7 +178,7 @@ public class Utilitaire {
     public Object construireObjet(
             Class<?> type,
             String prefixe,
-            Map<String, String[]> parametrePage) throws Exception {
+            Map<String, String[]> parametrePage, Map<String, Part> fichiers) throws Exception {
 
         Object object = type.getDeclaredConstructor().newInstance();
         Field[] fields = type.getDeclaredFields();
@@ -186,7 +190,20 @@ public class Utilitaire {
             String nomParametre = prefixe + "." + nomChamp;
             Class<?> typeChamp = field.getType();
 
-            if (estTypeSimple(typeChamp)) {
+            if (MapFile.class.isAssignableFrom(typeChamp)) {
+
+                Part fichier = fichiers.get(nomParametre);
+
+                if (fichier != null
+                        && fichier.getSubmittedFileName() != null
+                        && !fichier.getSubmittedFileName().isEmpty()) {
+
+                    MapFile mapFile = construireMapFile(fichier);
+
+                    field.setAccessible(true);
+                    field.set(object, mapFile);
+                }
+            } else if (estTypeSimple(typeChamp)) {
 
                 String[] valeurObjet = parametrePage.get(nomParametre);
 
@@ -232,7 +249,7 @@ public class Utilitaire {
                             List<Object> liste = construireListeObjets(
                                     classeElement,
                                     nomParametre,
-                                    parametrePage);
+                                    parametrePage, fichiers);
 
                             field.setAccessible(true);
                             field.set(object, liste);
@@ -254,7 +271,7 @@ public class Utilitaire {
                     Object objetEnfant = construireObjet(
                             field.getType(),
                             nomParametre,
-                            parametrePage);
+                            parametrePage, fichiers);
 
                     field.setAccessible(true);
                     field.set(object, objetEnfant);
@@ -262,6 +279,43 @@ public class Utilitaire {
             }
         }
         return object;
+    }
+
+    public MapFile construireMapFile(Part fichier) throws Exception {
+
+        // 1. Récupérer le nom du fichier
+        String nomFichier = fichier.getSubmittedFileName();
+
+        // 2. Conserver uniquement le nom du fichier
+        nomFichier = new File(nomFichier).getName();
+
+        // 3. Déterminer l'extension
+        String extension = "";
+
+        int position = nomFichier.lastIndexOf('.');
+
+        if (position >= 0) {
+            extension = nomFichier.substring(position + 1);
+        }
+
+        // 4. Préparer la lecture du contenu
+        ByteArrayOutputStream sortie = new ByteArrayOutputStream();
+
+        // 5. Lire le fichier
+        try (InputStream entree = fichier.getInputStream()) {
+
+            byte[] tampon = new byte[1024];
+            int taille;
+            while ((taille = entree.read(tampon)) != -1) {
+                sortie.write(tampon, 0, taille);
+            }
+        }
+
+        // 6. Récupérer tous les octets
+        byte[] contenu = sortie.toByteArray();
+
+        // 7. Construire et retourner l'objet
+        return new MapFile(nomFichier, extension, contenu);
     }
 
 }
