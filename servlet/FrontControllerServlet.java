@@ -2,6 +2,7 @@ package servlet;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.*;
 import mg.itu.miantra.annotation.WebApi;
 import util.HttpMethod;
@@ -23,6 +24,7 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
+@MultipartConfig
 public class FrontControllerServlet extends HttpServlet {
 
     HashMap<UrlMethod, Mapping> map = new HashMap<>();

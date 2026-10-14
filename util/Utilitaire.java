@@ -1,7 +1,9 @@
 package util;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -9,10 +11,14 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -281,15 +287,29 @@ public class Utilitaire {
         return object;
     }
 
+    public Properties lireProperties() throws IOException {
+
+        Properties properties = new Properties();
+
+        try (InputStream input = getClass()
+                .getClassLoader()
+                .getResourceAsStream("application.properties")) {
+
+            if (input == null) {
+                throw new IOException(
+                        "Fichier application.properties introuvable");
+            }
+            properties.load(input);
+        }
+        return properties;
+    }
+
     public MapFile construireMapFile(Part fichier) throws Exception {
 
-        // 1. Récupérer le nom du fichier
         String nomFichier = fichier.getSubmittedFileName();
 
-        // 2. Conserver uniquement le nom du fichier
         nomFichier = new File(nomFichier).getName();
 
-        // 3. Déterminer l'extension
         String extension = "";
 
         int position = nomFichier.lastIndexOf('.');
@@ -298,23 +318,41 @@ public class Utilitaire {
             extension = nomFichier.substring(position + 1);
         }
 
-        // 4. Préparer la lecture du contenu
         ByteArrayOutputStream sortie = new ByteArrayOutputStream();
 
-        // 5. Lire le fichier
         try (InputStream entree = fichier.getInputStream()) {
 
             byte[] tampon = new byte[1024];
             int taille;
+
             while ((taille = entree.read(tampon)) != -1) {
                 sortie.write(tampon, 0, taille);
             }
         }
 
-        // 6. Récupérer tous les octets
         byte[] contenu = sortie.toByteArray();
 
-        // 7. Construire et retourner l'objet
+        // Lire le chemin depuis application.properties
+        Properties properties = lireProperties();
+        String cheminUpload = properties.getProperty("chemin");
+
+        if (cheminUpload == null || cheminUpload.trim().isEmpty()) {
+            throw new Exception("La propriété chemin n'est pas définie");
+        }
+
+        // Créer le dossier upload s'il n'existe pas
+        Path dossierUpload = Paths.get(cheminUpload);
+        Files.createDirectories(dossierUpload);
+
+        // Définir le chemin du fichier à sauvegarder
+        Path cheminFichier = dossierUpload.resolve(
+                System.currentTimeMillis() + "_" + nomFichier);
+
+        // Copier le contenu dans le dossier upload
+        try (InputStream entree = new ByteArrayInputStream(contenu)) {
+            Files.copy(entree, cheminFichier);
+        }
+
         return new MapFile(nomFichier, extension, contenu);
     }
 
