@@ -1,18 +1,28 @@
 package util;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
+
+import jakarta.servlet.http.Part;
 
 public class Utilitaire {
 
@@ -131,7 +141,7 @@ public class Utilitaire {
     public List<Object> construireListeObjets(
             Class<?> typeElement,
             String prefixe,
-            Map<String, String[]> parametrePage) throws Exception {
+            Map<String, String[]> parametrePage, Map<String, Part> fichiers) throws Exception {
 
         List<Object> liste = new ArrayList<>();
         Set<Integer> indices = new TreeSet<>();
@@ -164,7 +174,7 @@ public class Utilitaire {
             Object objet = construireObjet(
                     typeElement,
                     prefixeObjet,
-                    parametrePage);
+                    parametrePage, fichiers);
 
             liste.add(objet);
         }
@@ -174,7 +184,7 @@ public class Utilitaire {
     public Object construireObjet(
             Class<?> type,
             String prefixe,
-            Map<String, String[]> parametrePage) throws Exception {
+            Map<String, String[]> parametrePage, Map<String, Part> fichiers) throws Exception {
 
         Object object = type.getDeclaredConstructor().newInstance();
         Field[] fields = type.getDeclaredFields();
@@ -186,7 +196,20 @@ public class Utilitaire {
             String nomParametre = prefixe + "." + nomChamp;
             Class<?> typeChamp = field.getType();
 
-            if (estTypeSimple(typeChamp)) {
+            if (MapFile.class.isAssignableFrom(typeChamp)) {
+
+                Part fichier = fichiers.get(nomParametre);
+
+                if (fichier != null
+                        && fichier.getSubmittedFileName() != null
+                        && !fichier.getSubmittedFileName().isEmpty()) {
+
+                    MapFile mapFile = construireMapFile(fichier);
+
+                    field.setAccessible(true);
+                    field.set(object, mapFile);
+                }
+            } else if (estTypeSimple(typeChamp)) {
 
                 String[] valeurObjet = parametrePage.get(nomParametre);
 
@@ -232,7 +255,7 @@ public class Utilitaire {
                             List<Object> liste = construireListeObjets(
                                     classeElement,
                                     nomParametre,
-                                    parametrePage);
+                                    parametrePage, fichiers);
 
                             field.setAccessible(true);
                             field.set(object, liste);
@@ -254,7 +277,7 @@ public class Utilitaire {
                     Object objetEnfant = construireObjet(
                             field.getType(),
                             nomParametre,
-                            parametrePage);
+                            parametrePage, fichiers);
 
                     field.setAccessible(true);
                     field.set(object, objetEnfant);
@@ -262,6 +285,75 @@ public class Utilitaire {
             }
         }
         return object;
+    }
+
+    public Properties lireProperties() throws IOException {
+
+        Properties properties = new Properties();
+
+        try (InputStream input = getClass()
+                .getClassLoader()
+                .getResourceAsStream("application.properties")) {
+
+            if (input == null) {
+                throw new IOException(
+                        "Fichier application.properties introuvable");
+            }
+            properties.load(input);
+        }
+        return properties;
+    }
+
+    public MapFile construireMapFile(Part fichier) throws Exception {
+
+        String nomFichier = fichier.getSubmittedFileName();
+
+        nomFichier = new File(nomFichier).getName();
+
+        String extension = "";
+
+        int position = nomFichier.lastIndexOf('.');
+
+        if (position >= 0) {
+            extension = nomFichier.substring(position + 1);
+        }
+
+        ByteArrayOutputStream sortie = new ByteArrayOutputStream();
+
+        try (InputStream entree = fichier.getInputStream()) {
+
+            byte[] tampon = new byte[1024];
+            int taille;
+
+            while ((taille = entree.read(tampon)) != -1) {
+                sortie.write(tampon, 0, taille);
+            }
+        }
+
+        byte[] contenu = sortie.toByteArray();
+
+        // Lire le chemin depuis application.properties
+        Properties properties = lireProperties();
+        String cheminUpload = properties.getProperty("chemin");
+
+        if (cheminUpload == null || cheminUpload.trim().isEmpty()) {
+            throw new Exception("La propriété chemin n'est pas définie");
+        }
+
+        // Créer le dossier upload s'il n'existe pas
+        Path dossierUpload = Paths.get(cheminUpload);
+        Files.createDirectories(dossierUpload);
+
+        // Définir le chemin du fichier à sauvegarder
+        Path cheminFichier = dossierUpload.resolve(
+                System.currentTimeMillis() + "_" + nomFichier);
+
+        // Copier le contenu dans le dossier upload
+        try (InputStream entree = new ByteArrayInputStream(contenu)) {
+            Files.copy(entree, cheminFichier);
+        }
+
+        return new MapFile(nomFichier, extension, contenu);
     }
 
 }
