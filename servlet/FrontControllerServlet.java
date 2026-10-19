@@ -11,6 +11,8 @@ import util.Mapping;
 import util.UrlMethod;
 import util.Utilitaire;
 import util.ModelAndView;
+import util.Session;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.lang.reflect.Method;
@@ -111,6 +113,11 @@ public class FrontControllerServlet extends HttpServlet {
 
                         if (type == ApplicationContext.class) {
                             valeurs[i] = springContext;
+
+                        } else if (type == Session.class) {
+                            
+                            HttpSession httpSession = request.getSession();
+                            valeurs[i] = new Session(httpSession);
 
                         } else if (util.estTypeSimple(type)) {
 
