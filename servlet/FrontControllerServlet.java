@@ -34,6 +34,7 @@ public class FrontControllerServlet extends HttpServlet {
     String suffix;
     ApplicationContext springContext;
     Utilitaire util = new Utilitaire();
+    Map<String, Session> sessions;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -57,6 +58,8 @@ public class FrontControllerServlet extends HttpServlet {
 
         this.prefix = getServletContext().getInitParameter("prefix");
         this.suffix = getServletContext().getInitParameter("suffix");
+
+        sessions = (Map<String, Session>) getServletContext().getAttribute("sessions");
     }
 
     private void processRequest(HttpServletRequest request, HttpServletResponse response)
@@ -110,14 +113,19 @@ public class FrontControllerServlet extends HttpServlet {
                     for (int i = 0; i < parametres.length; i++) {
                         Parameter p = parametres[i];
                         Class<?> type = p.getType();
+                        Session session = null;
 
                         if (type == ApplicationContext.class) {
                             valeurs[i] = springContext;
 
                         } else if (type == Session.class) {
-                            
                             HttpSession httpSession = request.getSession();
-                            valeurs[i] = new Session(httpSession);
+
+                            if (!sessions.containsKey(httpSession.getId())) {
+                                sessions.put(httpSession.getId(), new Session(httpSession));
+                            }
+                            session = sessions.get(httpSession.getId());
+                            valeurs[i] = session;
 
                         } else if (util.estTypeSimple(type)) {
 
