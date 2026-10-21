@@ -34,7 +34,6 @@ public class FrontControllerServlet extends HttpServlet {
     String suffix;
     ApplicationContext springContext;
     Utilitaire util = new Utilitaire();
-    Map<String, Session> sessions;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -59,9 +58,9 @@ public class FrontControllerServlet extends HttpServlet {
         this.prefix = getServletContext().getInitParameter("prefix");
         this.suffix = getServletContext().getInitParameter("suffix");
 
-        sessions = (Map<String, Session>) getServletContext().getAttribute("sessions");
     }
 
+    @SuppressWarnings("unchecked")
     private void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -120,6 +119,8 @@ public class FrontControllerServlet extends HttpServlet {
 
                         } else if (type == Session.class) {
                             HttpSession httpSession = request.getSession();
+                            Map<String, Session> sessions = (Map<String, Session>) getServletContext()
+                                    .getAttribute("sessions");
 
                             if (!sessions.containsKey(httpSession.getId())) {
                                 sessions.put(httpSession.getId(), new Session(httpSession));
