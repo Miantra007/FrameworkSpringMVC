@@ -11,6 +11,8 @@ import util.Mapping;
 import util.UrlMethod;
 import util.Utilitaire;
 import util.ModelAndView;
+import util.Session;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.lang.reflect.Method;
@@ -55,8 +57,10 @@ public class FrontControllerServlet extends HttpServlet {
 
         this.prefix = getServletContext().getInitParameter("prefix");
         this.suffix = getServletContext().getInitParameter("suffix");
+
     }
 
+    @SuppressWarnings("unchecked")
     private void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -108,9 +112,21 @@ public class FrontControllerServlet extends HttpServlet {
                     for (int i = 0; i < parametres.length; i++) {
                         Parameter p = parametres[i];
                         Class<?> type = p.getType();
+                        Session session = null;
 
                         if (type == ApplicationContext.class) {
                             valeurs[i] = springContext;
+
+                        } else if (type == Session.class) {
+                            HttpSession httpSession = request.getSession();
+                            Map<String, Session> sessions = (Map<String, Session>) getServletContext()
+                                    .getAttribute("sessions");
+
+                            if (!sessions.containsKey(httpSession.getId())) {
+                                sessions.put(httpSession.getId(), new Session(httpSession));
+                            }
+                            session = sessions.get(httpSession.getId());
+                            valeurs[i] = session;
 
                         } else if (util.estTypeSimple(type)) {
 
