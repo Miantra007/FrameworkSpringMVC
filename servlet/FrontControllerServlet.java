@@ -91,20 +91,50 @@ public class FrontControllerServlet extends HttpServlet {
                 Method met = mapping.getMethod();
                 Object controller = mapping.getClazz().getDeclaredConstructor().newInstance();
                 if (met.isAnnotationPresent(Auth.class)) {
+
                     String nomAuth = (String) getServletContext().getAttribute("authSession");
+
                     String urlLogin = (String) getServletContext().getAttribute("authLogin");
 
                     HttpSession httpSession = request.getSession(false);
-
-                    Boolean authentifie = false;
+                    boolean authentifie = false;
 
                     if (httpSession != null) {
                         Object valeur = httpSession.getAttribute(nomAuth);
                         authentifie = Boolean.TRUE.equals(valeur);
                     }
+
                     if (!authentifie) {
                         response.sendRedirect(request.getContextPath() + urlLogin);
                         return;
+                    }
+
+                    Auth auth = met.getAnnotation(Auth.class);
+                    String[] rolesAutorises = auth.roles();
+
+                    if (rolesAutorises.length > 0) {
+
+                        Object roleSession = httpSession.getAttribute("role");
+                        boolean roleAutorise = false;
+
+                        if (roleSession instanceof String) {
+
+                            String roleUtilisateur = (String) roleSession;
+                            for (String role : rolesAutorises) {
+                                if (role.equals(roleUtilisateur)) {
+                                    roleAutorise = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!roleAutorise) {
+                            if (!roleAutorise) {
+                                response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                                        "Vous n'avez pas le droit d'accéder à cette page.");
+                                return;
+                            }
+                            return;
+                        }
                     }
                 }
 
@@ -242,8 +272,15 @@ public class FrontControllerServlet extends HttpServlet {
                     return;
                 }
 
-                if (result instanceof String str) {
-                    response.getWriter().println(str);
+                if (result instanceof String) {
+                    String texte = (String) result;
+
+                    if (texte.startsWith("redirect:")) {
+                        String url = texte.substring("redirect:".length());
+                        response.sendRedirect(request.getContextPath() + url);
+                        return;
+                    }
+                    response.getWriter().println(texte);
                     return;
                 }
 
