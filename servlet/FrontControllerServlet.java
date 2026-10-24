@@ -4,6 +4,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.*;
+import mg.itu.miantra.annotation.Auth;
 import mg.itu.miantra.annotation.WebApi;
 import util.HttpMethod;
 import util.MapFile;
@@ -34,6 +35,8 @@ public class FrontControllerServlet extends HttpServlet {
     String suffix;
     ApplicationContext springContext;
     Utilitaire util = new Utilitaire();
+    String authSession;
+    String authLogin;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -57,7 +60,10 @@ public class FrontControllerServlet extends HttpServlet {
 
         this.prefix = getServletContext().getInitParameter("prefix");
         this.suffix = getServletContext().getInitParameter("suffix");
-
+        this.authSession = getInitParameter("auth-session");
+        this.authLogin = getInitParameter("auth-login");
+        context.setAttribute("authSession", authSession);
+        context.setAttribute("authLogin", authLogin);
     }
 
     @SuppressWarnings("unchecked")
@@ -84,6 +90,24 @@ public class FrontControllerServlet extends HttpServlet {
             try {
                 Method met = mapping.getMethod();
                 Object controller = mapping.getClazz().getDeclaredConstructor().newInstance();
+                if (met.isAnnotationPresent(Auth.class)) {
+                    String nomAuth = (String) getServletContext().getAttribute("authSession");
+                    String urlLogin = (String) getServletContext().getAttribute("authLogin");
+
+                    HttpSession httpSession = request.getSession(false);
+
+                    Boolean authentifie = false;
+
+                    if (httpSession != null) {
+                        Object valeur = httpSession.getAttribute(nomAuth);
+                        authentifie = Boolean.TRUE.equals(valeur);
+                    }
+                    if (!authentifie) {
+                        response.sendRedirect(request.getContextPath() + urlLogin);
+                        return;
+                    }
+                }
+
                 Object result = null;
 
                 if (met.getParameterCount() == 0) {
