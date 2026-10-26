@@ -37,6 +37,7 @@ public class FrontControllerServlet extends HttpServlet {
     Utilitaire util = new Utilitaire();
     String authSession;
     String authLogin;
+    String role;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -60,10 +61,15 @@ public class FrontControllerServlet extends HttpServlet {
 
         this.prefix = getServletContext().getInitParameter("prefix");
         this.suffix = getServletContext().getInitParameter("suffix");
+        
         this.authSession = getInitParameter("auth-session");
         this.authLogin = getInitParameter("auth-login");
+        this.role = getInitParameter("role-session");
+
         context.setAttribute("authSession", authSession);
         context.setAttribute("authLogin", authLogin);
+        context.setAttribute("role", role);
+
     }
 
     @SuppressWarnings("unchecked")
@@ -95,6 +101,7 @@ public class FrontControllerServlet extends HttpServlet {
                     String nomAuth = (String) getServletContext().getAttribute("authSession");
 
                     String urlLogin = (String) getServletContext().getAttribute("authLogin");
+                    String rl = (String) getServletContext().getAttribute("role");
 
                     HttpSession httpSession = request.getSession(false);
                     boolean authentifie = false;
@@ -114,7 +121,7 @@ public class FrontControllerServlet extends HttpServlet {
 
                     if (rolesAutorises.length > 0) {
 
-                        Object roleSession = httpSession.getAttribute("role");
+                        Object roleSession = httpSession.getAttribute(rl);
                         boolean roleAutorise = false;
 
                         if (roleSession instanceof String) {
