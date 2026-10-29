@@ -61,7 +61,7 @@ public class FrontControllerServlet extends HttpServlet {
 
         this.prefix = getServletContext().getInitParameter("prefix");
         this.suffix = getServletContext().getInitParameter("suffix");
-        
+
         this.authSession = getInitParameter("auth-session");
         this.authLogin = getInitParameter("auth-login");
         this.role = getInitParameter("role-session");
@@ -95,7 +95,22 @@ public class FrontControllerServlet extends HttpServlet {
             Mapping mapping = map.get(urlMethod);
             try {
                 Method met = mapping.getMethod();
-                Object controller = mapping.getClazz().getDeclaredConstructor().newInstance();
+                Class<?> clazz = mapping.getClazz();
+                Map<Class<?>, Object> controllers = (Map<Class<?>, Object>) getServletContext()
+                        .getAttribute("controllerInstance");
+
+                Object controller = controllers.computeIfAbsent(clazz, c -> {
+                    try {
+                        System.out.println("Création du contrôleur : " + c.getName());
+                        return c.getDeclaredConstructor().newInstance();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+                System.out.println("Contrôleur utilisé : " + clazz.getName());
+                System.out.println("Identité de l'instance : "
+                        + System.identityHashCode(controller));
+
                 if (met.isAnnotationPresent(Auth.class)) {
 
                     String nomAuth = (String) getServletContext().getAttribute("authSession");
