@@ -3,12 +3,12 @@ package listener;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import jakarta.servlet.annotation.WebListener;
 import mg.itu.miantra.annotation.Url;
 import util.HttpMethod;
 import util.Mapping;
@@ -71,6 +71,9 @@ public class Listener implements ServletContextListener {
             context.setAttribute("springContext", conteneurSpring);
             context.setAttribute("mapping", map);
             context.setAttribute("sessions", new ConcurrentHashMap<String, Session>());
+
+            Map<Class<?>, Object> controllerInstance = new ConcurrentHashMap<>();
+            context.setAttribute("controllerInstance", controllerInstance);
 
         } catch (Exception e) {
             System.out.println(e.getMessage());
